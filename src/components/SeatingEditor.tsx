@@ -282,8 +282,9 @@ const SeatContextMenu: React.FC<SeatContextMenuProps> = ({ x, y, seatId, onEdit,
           padding: '8px 12px',
           borderBottom: '1px solid #eee',
           fontSize: '12px',
-          color: '#666',
-          backgroundColor: '#f8f9fa'
+          color: '#333',
+          backgroundColor: '#f8f9fa',
+          fontWeight: 'bold'
         }}
       >
         ID: {seatId}
@@ -677,7 +678,9 @@ const SeatingEditor = React.forwardRef<SeatingEditorRef, SeatingEditorProps>(({
   const transformerRef = useRef<any>(null);
   const stageRef = useRef<any>(null);
   const labelTextRef = useRef<any>(null);
+  const sectionTextRefs = useRef<{[key: string]: any}>({});
   const [labelDims, setLabelDims] = useState<{width: number, height: number}>({width: 0, height: 0});
+  const [sectionTextDims, setSectionTextDims] = useState<{[key: string]: {width: number, height: number}}>({});
 
   // Handle keyboard events for space key
   useEffect(() => {
@@ -782,6 +785,18 @@ const SeatingEditor = React.forwardRef<SeatingEditorRef, SeatingEditorProps>(({
         height: labelTextRef.current.height(),
       });
     }
+    
+    // Calculate section text dimensions
+    const newSectionTextDims: {[key: string]: {width: number, height: number}} = {};
+    layout.sections.forEach(section => {
+      if (section.type === 'section' && sectionTextRefs.current[section.id]) {
+        newSectionTextDims[section.id] = {
+          width: sectionTextRefs.current[section.id].width(),
+          height: sectionTextRefs.current[section.id].height(),
+        };
+      }
+    });
+    setSectionTextDims(newSectionTextDims);
   }, [layout.sections]); // rerun when sections change
 
   const handleDragEnd = useCallback((e: any, type: 'section', id: string) => {
@@ -1273,6 +1288,9 @@ const SeatingEditor = React.forwardRef<SeatingEditorRef, SeatingEditorProps>(({
                 />
               ) : (
                 <Text
+                  ref={(el) => {
+                    if (el) sectionTextRefs.current[section.id] = el;
+                  }}
                   x={section.x + section.width / 2}
                   y={section.y - 25}
                   text={section.name}
@@ -1281,7 +1299,7 @@ const SeatingEditor = React.forwardRef<SeatingEditorRef, SeatingEditorProps>(({
                   fontStyle="bold"
                   align="center"
                   rotation={section.rotation}
-                  offsetX={0}
+                  offsetX={sectionTextDims[section.id]?.width ? sectionTextDims[section.id].width / 2 : 0}
                   offsetY={0}
                   onClick={() => setEditingSection(section.id)}
                 />

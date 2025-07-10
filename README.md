@@ -1,4 +1,5 @@
 # Seating Editor
+![Seating Editor Preview](./public/image.png)
 
 A powerful React component for creating and editing interactive seating layouts with drag-and-drop functionality.
 
