@@ -1,22 +1,58 @@
 {
-  "name": "seating",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "seatmap-creator",
+  "version": "1.0.0",
+  "description": "A React component for creating interactive seating layouts with drag and drop, zoom, and export capabilities",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "rollup -c",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "keywords": [
+    "react",
+    "seating",
+    "seatmap",
+    "layout",
+    "drag-drop",
+    "canvas",
+    "konva",
+    "typescript"
+  ],
+  "author": {
+    "name": "Ibrahim Rahhal",
+    "email": "ibrahim.rahhal3636@gmail.com",
+    "url": "https://github.com/ibrahimrahhal"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ibrahimrahhal/seatmap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ibrahimrahhal/seatmap/issues"
+  },
+  "homepage": "https://github.com/ibrahimrahhal/seatmap#readme",
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
   },
   "dependencies": {
     "konva": "^9.3.22",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
     "react-konva": "^19.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@rollup/plugin-commonjs": "^25.0.8",
+    "@rollup/plugin-node-resolve": "^15.3.1",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
@@ -24,6 +60,11 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rollup": "^4.44.2",
+    "rollup-plugin-dts": "^6.2.1",
+    "tslib": "^2.8.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.3"
