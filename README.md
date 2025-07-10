@@ -17,7 +17,7 @@ A powerful React component for creating and editing interactive seating layouts 
 ## Installation
 
 ```bash
-npm install react-konva konva
+npm install seatmap-creator
 ```
 
 ## Basic Usage
