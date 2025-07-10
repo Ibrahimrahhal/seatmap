@@ -1,6 +1,6 @@
 {
   "name": "seatmap-creator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A React component for creating interactive seating layouts with drag and drop, zoom, and export capabilities",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -45,6 +45,7 @@
     "react-dom": ">=16.8.0"
   },
   "dependencies": {
+    "canvas": "^3.1.2",
     "konva": "^9.3.22",
     "react-konva": "^19.0.7"
   },

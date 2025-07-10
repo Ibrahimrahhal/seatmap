@@ -2,26 +2,94 @@ import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from
 import { Stage, Layer, Group, Rect, Text, Circle, Transformer } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 
+/**
+ * SeatingEditor - A React component for creating and editing seating layouts
+ * 
+ * Features:
+ * - Interactive seating chart editor with drag-and-drop functionality
+ * - Add, edit, and delete sections and seats
+ * - Rotate and resize sections
+ * - Fill sections with grid-based seats
+ * - Export layouts to JSON
+ * - Zoom and pan controls
+ * - Context menus for section and seat management
+ * 
+ * Props:
+ * @param {function} onLayoutChange - Callback function called when layout changes
+ * @param {SeatingLayout} initialLayout - Initial layout configuration
+ * @param {string|number} height - Height of the editor container (default: '100vh')
+ * @param {string|number} width - Width of the editor container (default: '100%')
+ * @param {string} backgroundColor - Background color of the editor (default: 'transparent')
+ * @param {boolean} hideToolbar - Hide the default toolbar (default: false)
+ * 
+ * Usage:
+ * ```tsx
+ * // Basic usage
+ * <SeatingEditor
+ *   height="600px"
+ *   width="800px"
+ *   backgroundColor="#f5f5f5"
+ *   onLayoutChange={(layout) => console.log(layout)}
+ * />
+ * 
+ * // With custom toolbar
+ * const editorRef = useRef<SeatingEditorRef>(null);
+ * 
+ * <div>
+ *   <button onClick={() => editorRef.current?.addSection()}>Add Section</button>
+ *   <button onClick={() => editorRef.current?.zoomIn()}>Zoom In</button>
+ *   <SeatingEditor
+ *     ref={editorRef}
+ *     hideToolbar={true}
+ *     onLayoutChange={(layout) => console.log(layout)}
+ *   />
+ * </div>
+ * ```
+ */
+
+/**
+ * Represents a seat in the seating layout
+ */
 export interface Seat {
+  /** Unique identifier for the seat */
   id: string;
+  /** X coordinate relative to section */
   x: number;
+  /** Y coordinate relative to section */
   y: number;
+  /** Row identifier (e.g., 'A', 'B', 'C') */
   row: string;
+  /** Seat number within the row */
   number: number;
+  /** ID of the section this seat belongs to */
   sectionId: string;
+  /** Radius of the seat circle */
   seatSize: number;
 }
 
+/**
+ * Represents a section in the seating layout
+ */
 export interface Section {
+  /** Unique identifier for the section */
   id: string;
+  /** Display name of the section */
   name: string;
+  /** Background color of the section */
   color: string;
+  /** X coordinate of the section */
   x: number;
+  /** Y coordinate of the section */
   y: number;
+  /** Width of the section */
   width: number;
+  /** Height of the section */
   height: number;
+  /** Rotation angle in degrees */
   rotation: number;
+  /** Array of seats in this section */
   seats: Seat[];
+  /** Type of section - 'section' for seating areas, 'label' for labels/stage */
   type: 'section' | 'label';
 }
 
@@ -35,14 +103,34 @@ export interface StageElement {
   type: 'stage' | 'section';
 }
 
+/**
+ * Represents the complete seating layout configuration
+ */
 export interface SeatingLayout {
+  /** Array of sections in the layout */
   sections: Section[];
+  /** Current zoom scale of the layout */
   scale: number;
 }
 
 interface SeatingEditorProps {
   onLayoutChange?: (layout: SeatingLayout) => void;
   initialLayout?: SeatingLayout;
+  height?: string | number;
+  width?: string | number;
+  backgroundColor?: string;
+  hideToolbar?: boolean;
+}
+
+export interface SeatingEditorRef {
+  addSection: () => void;
+  addLabelSection: () => void;
+  setTool: (tool: 'select' | 'add-seat' | 'add-section') => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  exportToJSON: () => void;
+  getLayout: () => SeatingLayout;
+  setLayout: (layout: SeatingLayout) => void;
 }
 
 interface ContextMenuProps {
@@ -523,10 +611,14 @@ const SeatEditDialog: React.FC<SeatEditDialogProps> = ({ seat, onConfirm, onCanc
   );
 };
 
-const SeatingEditor: React.FC<SeatingEditorProps> = ({ 
+const SeatingEditor = React.forwardRef<SeatingEditorRef, SeatingEditorProps>(({ 
   onLayoutChange, 
-  initialLayout 
-}) => {
+  initialLayout,
+  height = '100vh',
+  width = '100%',
+  backgroundColor = 'transparent',
+  hideToolbar = false
+}, ref) => {
   const [layout, setLayout] = useState<SeatingLayout>(initialLayout || {
     sections: [
       {
@@ -987,128 +1079,150 @@ const SeatingEditor: React.FC<SeatingEditorProps> = ({
     setSeatEditDialog(null);
   }, [layout, onLayoutChange, seatEditDialog]);
 
+  // Expose methods via ref
+  React.useImperativeHandle(ref, () => ({
+    addSection,
+    addLabelSection,
+    setTool,
+    zoomIn: () => handleZoom('in'),
+    zoomOut: () => handleZoom('out'),
+    exportToJSON,
+    getLayout: () => layout,
+    setLayout: (newLayout: SeatingLayout) => {
+      setLayout(newLayout);
+      onLayoutChange?.(newLayout);
+    }
+  }), [layout, onLayoutChange, addSection, addLabelSection, setTool, handleZoom, exportToJSON]);
+
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+    <div style={{ 
+      width: typeof width === 'number' ? `${width}px` : width, 
+      height: typeof height === 'number' ? `${height}px` : height, 
+      position: 'relative',
+      backgroundColor
+    }}>
       {/* Toolbar */}
-      <div style={{
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        zIndex: 1000,
-        background: 'white',
-        padding: '10px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        display: 'flex',
-        gap: '10px',
-        flexWrap: 'wrap'
-      }}>
-        <button
-          onClick={() => setTool('select')}
-          style={{
-            background: tool === 'select' ? '#007bff' : '#f8f9fa',
-            color: tool === 'select' ? 'white' : '#333',
-            border: '1px solid #ddd',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Select
-        </button>
-        <button
-          onClick={() => setTool('add-seat')}
-          style={{
-            background: tool === 'add-seat' ? '#28a745' : '#f8f9fa',
-            color: tool === 'add-seat' ? 'white' : '#333',
-            border: '1px solid #ddd',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Add Seat
-        </button>
-        <button
-          onClick={addSection}
-          style={{
-            background: '#17a2b8',
-            color: 'white',
-            border: '1px solid #17a2b8',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Add Section
-        </button>
-        <button
-          onClick={addLabelSection}
-          style={{
-            background: '#6f42c1',
-            color: 'white',
-            border: '1px solid #6f42c1',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Add Label Section
-        </button>
-        <button
-          onClick={() => handleZoom('in')}
-          style={{
-            background: '#ffc107',
-            color: '#333',
-            border: '1px solid #ffc107',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Zoom In
-        </button>
-        <button
-          onClick={() => handleZoom('out')}
-          style={{
-            background: '#ffc107',
-            color: '#333',
-            border: '1px solid #ffc107',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Zoom Out
-        </button>
-        <button
-          onClick={exportToJSON}
-          style={{
-            background: '#6f42c1',
-            color: 'white',
-            border: '1px solid #6f42c1',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Export JSON
-        </button>
-        <div style={{ fontSize: '12px', color: '#666' }}>
-          Scale: {scale.toFixed(2)}x
-        </div>
-        {isSpacePressed && (
-          <div style={{ fontSize: '12px', color: '#28a745', fontWeight: 'bold' }}>
-            SPACE: Pan Mode
+      {!hideToolbar && (
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          zIndex: 1000,
+          background: 'white',
+          padding: '10px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          display: 'flex',
+          gap: '10px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => setTool('select')}
+            style={{
+              background: tool === 'select' ? '#007bff' : '#f8f9fa',
+              color: tool === 'select' ? 'white' : '#333',
+              border: '1px solid #ddd',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Select
+          </button>
+          <button
+            onClick={() => setTool('add-seat')}
+            style={{
+              background: tool === 'add-seat' ? '#28a745' : '#f8f9fa',
+              color: tool === 'add-seat' ? 'white' : '#333',
+              border: '1px solid #ddd',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Add Seat
+          </button>
+          <button
+            onClick={addSection}
+            style={{
+              background: '#17a2b8',
+              color: 'white',
+              border: '1px solid #17a2b8',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Add Section
+          </button>
+          <button
+            onClick={addLabelSection}
+            style={{
+              background: '#6f42c1',
+              color: 'white',
+              border: '1px solid #6f42c1',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Add Label Section
+          </button>
+          <button
+            onClick={() => handleZoom('in')}
+            style={{
+              background: '#ffc107',
+              color: '#333',
+              border: '1px solid #ffc107',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Zoom In
+          </button>
+          <button
+            onClick={() => handleZoom('out')}
+            style={{
+              background: '#ffc107',
+              color: '#333',
+              border: '1px solid #ffc107',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Zoom Out
+          </button>
+          <button
+            onClick={exportToJSON}
+            style={{
+              background: '#6f42c1',
+              color: 'white',
+              border: '1px solid #6f42c1',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Export JSON
+          </button>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            Scale: {scale.toFixed(2)}x
           </div>
-        )}
-      </div>
+          {isSpacePressed && (
+            <div style={{ fontSize: '12px', color: '#28a745', fontWeight: 'bold' }}>
+              SPACE: Pan Mode
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Canvas */}
       <Stage
         ref={stageRef}
-        width={window.innerWidth}
-        height={window.innerHeight}
+        width={typeof width === 'number' ? width : window.innerWidth}
+        height={typeof height === 'number' ? height : window.innerHeight}
         scaleX={scale}
         scaleY={scale}
         draggable={isSpacePressed}
@@ -1385,6 +1499,6 @@ const SeatingEditor: React.FC<SeatingEditorProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default SeatingEditor;
